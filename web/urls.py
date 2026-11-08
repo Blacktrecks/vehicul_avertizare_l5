@@ -12,4 +12,8 @@ urlpatterns = [
     path("sim/<str:action>/", views.api_sim_action, name="api_sim_action"),
     path("logs/", views.api_logs, name="api_logs"),
     path("selftest/", views.api_selftest, name="api_selftest"),
+    path("devices/", views.api_devices, name="api_devices"),
+    path("devices/scan/", views.api_devices_scan, name="api_devices_scan"),
+    path("devices/<str:device_id>/", views.api_device_detail, name="api_device_detail"),
+    path("devices/<str:device_id>/<str:action>/", views.api_device_action, name="api_device_action"),
 ]

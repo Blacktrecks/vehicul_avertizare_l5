@@ -1,4 +1,5 @@
 {% extends 'web/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="page-shell">
@@ -58,6 +59,47 @@
       </table>
     </div>
     {% endif %}
+
+    {% if devices %}
+    <div class="device-manager panel-subsection">
+      <div class="page-header compact-header">
+        <div>
+          <div class="eyebrow">Dispozitive active</div>
+          <h2>Manager conexiuni</h2>
+        </div>
+        <button type="button" class="btn-primary" id="scan-devices-btn">Scanare dispozitive</button>
+      </div>
+
+      <div class="device-form compact-device-form">
+        <div class="device-field wide">
+          <label>Detectare automată</label>
+          <div class="device-note">Caută automat porturi USB seriale și dispozitive Meshtastic/Zigbee, fără să introduci un nume manual.</div>
+        </div>
+      </div>
+
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>Tip</th>
+              <th>Adresă</th>
+              <th>Stare</th>
+              <th>Acțiuni</th>
+            </tr>
+          </thead>
+          <tbody id="device-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
   </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+{% if devices %}
+<script src="{% static 'web/js/device-manager.js' %}"></script>
+{% endif %}
 {% endblock %}

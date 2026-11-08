@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from sdc.registry import DeviceRegistry
 from sdc.transport_sim import SimulatedTransport
@@ -40,6 +41,19 @@ class DeviceRegistryTests(unittest.TestCase):
         self.assertIn("region", diff)
         self.assertEqual(diff["region"]["current"], "EU_868")
         self.assertEqual(diff["region"]["target"], "US_915")
+
+    def test_registry_scan_detects_serial_devices(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = DeviceRegistry(Path(temp_dir) / "devices.json")
+            fake_ports = [
+                {"device": "/dev/ttyACM0", "description": "Heltec Wireless Stick Lite V3", "vid": "0x1d50", "pid": "0x607f"},
+                {"device": "/dev/ttyUSB0", "description": "USB Serial Device", "vid": "0x0403", "pid": "0x6001"},
+            ]
+            with patch("sdc.registry.scan_serial_ports", return_value=fake_ports):
+                detected = registry.scan()
+            self.assertTrue(any(item.get("address") == "/dev/ttyACM0" for item in detected))
+            self.assertTrue(any(item.get("transport") == "serial" for item in detected))
+            self.assertTrue(any(item.get("label") and "Heltec" in item.get("label") for item in detected))
 
 
 if __name__ == "__main__":

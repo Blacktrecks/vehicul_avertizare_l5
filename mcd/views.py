@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET
 
 from . import config, i2c, mpu6050
 from . import test as driver_tests
+from sdc.registry import DeviceRegistry
 from web.service import StateService
 
 _selftest_lock = threading.Lock()
@@ -29,7 +30,7 @@ def index(request):
     })
 
 
-def _page(request, title, subtitle, cards, metrics=None, table_headers=None, table_rows=None):
+def _page(request, title, subtitle, cards, metrics=None, table_headers=None, table_rows=None, **kwargs):
     return render(request, "web/section_page.html", {
         "section_title": title,
         "section_subtitle": subtitle,
@@ -37,34 +38,43 @@ def _page(request, title, subtitle, cards, metrics=None, table_headers=None, tab
         "metrics": metrics or [],
         "table_headers": table_headers or [],
         "table_rows": table_rows or [],
+        **kwargs,
     })
 
 
 @ensure_csrf_cookie
 @require_GET
 def page_devices(request):
+    devices = DeviceRegistry().scan()
+    cards = [
+        {"title": "Zigbee", "value": f"{sum(1 for d in devices if d.get('type') == 'zigbee')} noduri", "detail": "USB / serial"},
+        {"title": "Meshtastic", "value": f"{sum(1 for d in devices if d.get('type') == 'meshtastic')} noduri", "detail": "LoRa / WiFi"},
+        {"title": "Stare", "value": "Live", "detail": "Scanare activă"},
+    ]
+    table_rows = [
+        [
+            item.get("label") or item.get("id") or "Dispozitiv",
+            item.get("type") or item.get("transport") or "sim",
+            item.get("address") or item.get("port") or "-",
+            "Conectat" if item.get("state") == "connected" else "Disponibil",
+            item.get("role") or "Profil",
+        ]
+        for item in devices
+    ]
     return _page(
         request,
         "Dispozitive",
         "Manager dispozitive și canale de comunicație",
-        [
-            {"title": "Zigbee", "value": "3 noduri", "detail": "OK / 96% PDR"},
-            {"title": "Meshtastic", "value": "2 noduri", "detail": "Link stabil"},
-            {"title": "MPU6050", "value": "1 modul", "detail": "Simulat"},
-        ],
+        cards,
         metrics=[
-            {"label": "Scanare USB", "value": "06"},
-            {"label": "Conectate", "value": "05"},
-            {"label": "Lat. medie", "value": "420 ms"},
+            {"label": "Scanare USB", "value": str(len(devices))},
+            {"label": "Conectate", "value": str(sum(1 for d in devices if d.get("state") == "connected"))},
+            {"label": "Tipuri", "value": str(len({d.get("transport") or "sim" for d in devices}))},
             {"label": "Profiluri", "value": "04"},
         ],
         table_headers=["Device", "Tip", "Port", "Stare", "Profil"],
-        table_rows=[
-            ["ZB-01", "Zigbee", "/dev/ttyUSB0", "Conectat", "Vehicul"],
-            ["MS-02", "Meshtastic", "/dev/ttyACM0", "Conectat", "Rutină"],
-            ["B1", "GPIO", "BUZZER", "Activ", "Default"],
-            ["L1", "GPIO", "LED", "Activ", "Default"],
-        ],
+        table_rows=table_rows,
+        devices=devices,
     )
 
 

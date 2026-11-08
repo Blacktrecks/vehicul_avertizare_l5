@@ -3,8 +3,51 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+
+def scan_serial_ports() -> list[dict[str, Any]]:
+    """Return serial port metadata for USB devices discovered on the host."""
+    try:
+        import serial.tools.list_ports as list_ports
+    except Exception:
+        return []
+
+    discovered: list[dict[str, Any]] = []
+    for port in list_ports.comports():
+        if isinstance(port, dict):
+            info = port
+        else:
+            info = {
+                "device": getattr(port, "device", ""),
+                "description": getattr(port, "description", "") or "",
+                "hwid": getattr(port, "hwid", "") or "",
+                "vid": getattr(port, "vid", None),
+                "pid": getattr(port, "pid", None),
+            }
+
+        device = str(info.get("device") or "").strip()
+        if not device:
+            continue
+
+        description = str(info.get("description") or "").strip()
+        hwid = str(info.get("hwid") or "").strip()
+        paired = (info.get("vid") or "", info.get("pid") or "")
+        label = description or device
+        if not label and hwid:
+            label = hwid
+
+        discovered.append({
+            "device": device,
+            "label": label,
+            "description": description,
+            "hwid": hwid,
+            "vid": paired[0],
+            "pid": paired[1],
+        })
+    return discovered
 
 
 class DeviceRegistry:
@@ -63,6 +106,40 @@ class DeviceRegistry:
 
     def scan(self) -> list[dict[str, Any]]:
         devices = self._load()
+        ports = scan_serial_ports()
+        if ports:
+            detected = []
+            seen: set[str] = set()
+            for port in ports:
+                device = str(port.get("device") or "").strip()
+                if not device or device in seen:
+                    continue
+                seen.add(device)
+                description = str(port.get("description") or "").strip()
+                hwid = str(port.get("hwid") or "").strip()
+                lower = f"{description} {hwid}".lower()
+                transport = "serial"
+                role = "Zigbee / USB"
+                if "heltec" in lower or "meshtastic" in lower:
+                    role = "Vehicul Meshtastic"
+                elif "xbee" in lower or "zigbee" in lower:
+                    role = "Zigbee"
+                record = {
+                    "id": re.sub(r"[^a-zA-Z0-9]+", "-", device).strip("-") or f"dev-{len(detected)+1}",
+                    "label": port.get("label") or description or device,
+                    "type": "meshtastic" if "heltec" in lower or "meshtastic" in lower else "zigbee",
+                    "transport": transport,
+                    "address": device,
+                    "port": device,
+                    "role": role,
+                    "state": "connected",
+                    "description": description,
+                    "hwid": hwid,
+                }
+                detected.append(record)
+            if detected:
+                self._save(detected)
+                return detected
         if devices:
             return devices
         default = [
