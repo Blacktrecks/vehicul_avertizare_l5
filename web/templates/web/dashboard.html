@@ -73,6 +73,130 @@
     </div>
   </section>
 
+  <section class="panel chart-panel">
+    <div class="panel-header">
+      <h2>Conexiune radio</h2>
+      <span class="pill-text neutral">Zigbee + Meshtastic</span>
+    </div>
+    <div class="chart-bars">
+      <div class="chart-row">
+        <span>Zigbee</span>
+        <div class="chart-track"><i id="zigbee-signal-bar" style="width: 72%"></i></div>
+        <strong id="zigbee-signal-value">72%</strong>
+      </div>
+      <div class="chart-row">
+        <span>Meshtastic</span>
+        <div class="chart-track"><i id="meshtastic-signal-bar" style="width: 91%"></i></div>
+        <strong id="meshtastic-signal-value">91%</strong>
+      </div>
+      <div class="chart-row">
+        <span>Hardware</span>
+        <div class="chart-track"><i id="hardware-signal-bar" style="width: 68%"></i></div>
+        <strong id="hardware-signal-value">68%</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel utility-panel">
+    <div class="panel-header">
+      <h2>Calitate radio și dispozitive</h2>
+    </div>
+    <div class="utility-grid">
+      <div class="utility-card">
+        <span>RSSI Zigbee</span>
+        <strong id="rssi-zigbee">-- dBm</strong>
+      </div>
+      <div class="utility-card">
+        <span>RSSI Meshtastic</span>
+        <strong id="rssi-meshtastic">-- dBm</strong>
+      </div>
+      <div class="utility-card">
+        <span>PDR</span>
+        <strong id="pdr-summary">--%</strong>
+      </div>
+      <div class="utility-card">
+        <span>Dispozitive</span>
+        <strong id="device-summary">--</strong>
+      </div>
+    </div>
+    <div class="mini-bars">
+      <div class="bar-row">
+        <label>Mesh</label>
+        <div class="bar-track"><i id="mesh-health-bar" style="width: 80%"></i></div>
+        <strong id="mesh-health-value">80%</strong>
+      </div>
+      <div class="bar-row">
+        <label>USB</label>
+        <div class="bar-track"><i id="usb-health-bar" style="width: 70%"></i></div>
+        <strong id="usb-health-value">70%</strong>
+      </div>
+      <div class="bar-row">
+        <label>Poziție</label>
+        <div class="bar-track"><i id="position-health-bar" style="width: 88%"></i></div>
+        <strong id="position-health-value">88%</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel chart-panel">
+    <div class="panel-header">
+      <h2>Trenduri simulare</h2>
+      <span class="pill-text neutral">Live</span>
+    </div>
+    <div class="trend-grid">
+      <div class="trend-card">
+        <div class="trend-header">
+          <span>Risc impact</span>
+          <strong id="risk-index">82%</strong>
+        </div>
+        <div class="spark-bars">
+          <span class="spark-bar" data-trend="risk" style="height: 34%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 42%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 52%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 68%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 80%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 72%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 84%"></span>
+          <span class="spark-bar" data-trend="risk" style="height: 92%"></span>
+        </div>
+      </div>
+
+      <div class="trend-card">
+        <div class="trend-header">
+          <span>Viteză</span>
+          <strong id="speed-trend-value">58 km/h</strong>
+        </div>
+        <div class="spark-bars">
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 32%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 38%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 47%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 58%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 64%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 61%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 72%"></span>
+          <span class="spark-bar spark-speed" data-trend="speed" style="height: 84%"></span>
+        </div>
+      </div>
+
+      <div class="trend-card">
+        <div class="trend-header">
+          <span>Latență</span>
+          <strong id="latency-trend-value">420 ms</strong>
+        </div>
+        <div class="spark-bars">
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 28%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 44%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 52%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 60%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 66%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 54%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 48%"></span>
+          <span class="spark-bar spark-latency" data-trend="latency" style="height: 58%"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="panel table-panel">
     <div class="panel-header">
       <h2>Mapare pini</h2>
