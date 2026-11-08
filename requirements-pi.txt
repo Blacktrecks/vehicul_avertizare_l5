@@ -1,0 +1,5 @@
+# Doar pe Raspberry Pi (hardware real). Pe PC driverele rulează în simulare.
+-r requirements.txt
+lgpio
+smbus2
+pyserial

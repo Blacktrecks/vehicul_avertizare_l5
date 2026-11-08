@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drivere MCD – sistem hibrid de avertizare</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg: #f7f9f4;
+      --surface: #ffffffd9;
+      --ink: #162018;
+      --muted: #4a5a4c;
+      --line: #d7e2cf;
+      --accent: #0f766e;
+      --warn: #d97706;
+      --danger: #b91c1c;
+      --ok: #15803d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 0% 0%, #c4f0dc 0%, #c4f0dc00 30%),
+        radial-gradient(circle at 100% 20%, #f8efaf 0%, #f8efaf00 34%),
+        radial-gradient(circle at 30% 100%, #bee6ff 0%, #bee6ff00 26%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 1.2rem;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 1rem;
+      animation: enter .5s ease both;
+    }
+
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero, .panel {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      box-shadow: 0 6px 24px #0b1a0d14;
+      padding: 1rem 1.1rem;
+    }
+
+    .hero h1 { margin: 0 0 .4rem; font-size: clamp(1.3rem, 2vw, 2.1rem); }
+    .sub { margin: 0; color: var(--muted); }
+    .mono { font-family: "IBM Plex Mono", monospace; }
+    .pill {
+      display: inline-block;
+      margin-top: .6rem;
+      padding: .22rem .62rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      font-size: .85rem;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+
+    .kpi { grid-column: span 3; }
+    .kpi h3 { margin: 0; font-size: .88rem; color: var(--muted); }
+    .kpi p { margin: .42rem 0 0; font-size: 1.6rem; font-weight: 700; }
+    .panel-wide { grid-column: span 8; }
+    .panel-side { grid-column: span 4; }
+    .panel-full { grid-column: 1 / -1; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: .5rem; text-align: left; border-bottom: 1px solid var(--line); }
+    th { font-size: .82rem; color: var(--muted); font-weight: 600; }
+    td { font-size: .92rem; }
+
+    .risk-high { color: var(--danger); font-weight: 700; }
+    .risk-medium { color: var(--warn); font-weight: 700; }
+    .risk-low { color: var(--ok); font-weight: 700; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .bad { color: var(--danger); font-weight: 700; }
+
+    .btns { display: flex; flex-wrap: wrap; gap: .55rem; }
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 12px;
+      padding: .45rem .8rem;
+      font-family: "IBM Plex Mono", monospace;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease;
+    }
+    button:hover { transform: translateY(-1px); background: #f4faf5; }
+
+    pre {
+      background: #102119;
+      color: #eaf6e6;
+      border-radius: 10px;
+      padding: .8rem;
+      overflow: auto;
+      max-height: 22rem;
+      font-size: .82rem;
+    }
+
+    .spark {
+      width: 100%;
+      height: 170px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #f5fcf7, #ffffff);
+    }
+
+    @media (max-width: 920px) {
+      .kpi, .panel-wide, .panel-side { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Sistem Hibrid de Avertizare Vehicule</h1>
+      <p class="sub">Dashboard demo pentru date Zigbee + Meshtastic, strat MCD/L4, pregătit pentru validare pe Raspberry Pi.</p>
+      <div class="pill">mod: <span class="mono">{{ mode }}</span> · I2C: <strong>{% if i2c_simulated %}simulat{% else %}hardware real{% endif %}</strong></div>
+    </section>
+
+    <section class="grid">
+      <article class="panel kpi"><h3>Viteză Vehicul Curent</h3><p id="kpi-speed">-- km/h</p></article>
+      <article class="panel kpi"><h3>Vecini Activi</h3><p id="kpi-neighbors">--</p></article>
+      <article class="panel kpi"><h3>Alerte Risc Ridicat</h3><p id="kpi-high">--</p></article>
+      <article class="panel kpi"><h3>Modul Surse Date</h3><p id="kpi-mode" class="mono">--</p></article>
+
+      <article class="panel panel-wide">
+        <h2>Traiectorie Accelerație (|a| în g)</h2>
+        <svg class="spark" id="accel-chart" viewBox="0 0 800 170" preserveAspectRatio="none" aria-label="Grafic acceleratie"></svg>
+      </article>
+
+      <article class="panel panel-side">
+        <h2>Comenzi MCD</h2>
+        <div class="btns">
+          <button id="refresh">Actualizează datele</button>
+          <button id="accel">Citește MPU6050</button>
+          <button id="selftest">Rulează auto-test</button>
+        </div>
+        <p id="accel-out" class="mono"></p>
+        <p id="selftest-out" class="mono"></p>
+      </article>
+
+      <article class="panel panel-full">
+        <h2>Vehicule Vecine (date dummy realiste)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Sursă</th><th>Distanță</th><th>Azimut</th><th>Viteză</th><th>vrel</th><th>Drift</th><th>Risc</th>
+            </tr>
+          </thead>
+          <tbody id="neighbors-body"></tbody>
+        </table>
+      </article>
+
+      <article class="panel panel-full">
+        <h2>Mapare Pini (cerință L4)</h2>
+        <table>
+          <thead><tr><th>Pin</th><th>Tip semnal</th><th>Nume semnal</th><th>Definiție</th></tr></thead>
+          <tbody>
+          {% for p in pins %}
+            <tr><td>{{ p.pin }}</td><td>{{ p.tip }}</td><td>{{ p.nume }}</td><td>{{ p.definitie }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <p class="sub">Endpoint JSON: <a href="{% url 'mcd:api_pins' %}">{% url 'mcd:api_pins' %}</a></p>
+      </article>
+
+      <article class="panel panel-full">
+        <h2>Log Auto-test Drivere</h2>
+        <pre id="log" hidden></pre>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function riskClass(risk) {
+      if (risk === "high") return "risk-high";
+      if (risk === "medium") return "risk-medium";
+      return "risk-low";
+    }
+
+    function renderChart(points) {
+      const chart = document.getElementById("accel-chart");
+      if (!points.length) {
+        chart.innerHTML = "";
+        return;
+      }
+      const min = Math.min(...points.map(p => p.magnitude_g)) - 0.1;
+      const max = Math.max(...points.map(p => p.magnitude_g)) + 0.1;
+      const span = Math.max(0.1, max - min);
+      const poly = points.map((p, i) => {
+        const x = (i / (points.length - 1 || 1)) * 800;
+        const y = 155 - ((p.magnitude_g - min) / span) * 130;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(" ");
+      chart.innerHTML = `
+        <line x1="0" y1="155" x2="800" y2="155" stroke="#c9d9c3" stroke-width="1"></line>
+        <line x1="0" y1="25" x2="800" y2="25" stroke="#dce7d5" stroke-width="1" stroke-dasharray="5 4"></line>
+        <polyline points="${poly}" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round"></polyline>
+      `;
+    }
+
+    async function loadDashboard() {
+      const response = await fetch("{% url 'mcd:api_dashboard' %}");
+      const data = await response.json();
+      if (!response.ok) return;
+
+      document.getElementById("kpi-speed").textContent = `${data.own_vehicle.speed_kmh} km/h`;
+      document.getElementById("kpi-neighbors").textContent = data.neighbors.length;
+      document.getElementById("kpi-high").textContent = data.alerts.high;
+      document.getElementById("kpi-mode").textContent = `${data.mode}/${data.simulated ? "sim" : "hw"}`;
+
+      const rows = data.neighbors.map((n) => `
+        <tr>
+          <td class="mono">${escapeHtml(n.vehicle_id)}</td>
+          <td>${escapeHtml(n.source)}</td>
+          <td>${n.distance_m} m</td>
+          <td>${n.bearing_deg}°</td>
+          <td>${n.speed_kmh} km/h</td>
+          <td>${n.rel_speed_kmh} km/h</td>
+          <td>${n.drift_mps} m/s</td>
+          <td class="${riskClass(n.risk)}">${escapeHtml(n.risk)}</td>
+        </tr>
+      `).join("");
+      document.getElementById("neighbors-body").innerHTML = rows;
+      renderChart(data.accel_trend || []);
+    }
+
+    document.getElementById("accel").onclick = async () => {
+      const out = document.getElementById("accel-out");
+      const r = await fetch("{% url 'mcd:api_accel' %}"); const d = await r.json();
+      out.textContent = r.ok
+        ? `ax=${d.ax_g} g, ay=${d.ay_g} g, az=${d.az_g} g, |a|=${d.magnitude_g} g${d.simulated ? " (simulat)" : ""}`
+        : "Eroare: " + d.error;
+    };
+    document.getElementById("selftest").onclick = async () => {
+      const out = document.getElementById("selftest-out"), log = document.getElementById("log");
+      const r = await fetch("{% url 'mcd:api_selftest' %}"); const d = await r.json();
+      if (!r.ok) { out.textContent = d.error; out.className = "bad"; return; }
+      out.textContent = `${d.tests_run} teste, ${d.failures} eșecuri, ${d.errors} erori`;
+      out.className = d.ok ? "ok" : "bad";
+      log.textContent = d.log; log.hidden = false;
+    };
+
+    document.getElementById("refresh").onclick = loadDashboard;
+    loadDashboard();
+    setInterval(loadDashboard, 5000);
+  </script>
+</body>
+</html>
