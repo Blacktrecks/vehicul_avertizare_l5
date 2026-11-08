@@ -55,6 +55,21 @@ class DeviceRegistryTests(unittest.TestCase):
             self.assertTrue(any(item.get("transport") == "serial" for item in detected))
             self.assertTrue(any(item.get("label") and "Heltec" in item.get("label") for item in detected))
 
+    def test_registry_scan_filters_system_serial_ports(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = DeviceRegistry(Path(temp_dir) / "devices.json")
+            fake_ports = [
+                {"device": "/dev/ttyS4", "description": "n/a", "vid": "0x1d50", "pid": "0x607f"},
+                {"device": "/dev/ttyACM0", "description": "Heltec Wireless Stick Lite V3", "vid": "0x1d50", "pid": "0x607f"},
+                {"device": "/dev/ttyUSB0", "description": "USB Serial Device", "vid": "0x0403", "pid": "0x6001"},
+            ]
+            with patch("sdc.registry.scan_serial_ports", return_value=fake_ports):
+                detected = registry.scan()
+            addresses = {item.get("address") for item in detected}
+            self.assertNotIn("/dev/ttyS4", addresses)
+            self.assertIn("/dev/ttyACM0", addresses)
+            self.assertIn("/dev/ttyUSB0", addresses)
+
 
 if __name__ == "__main__":
     unittest.main()
