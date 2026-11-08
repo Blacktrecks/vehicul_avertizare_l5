@@ -1,0 +1,128 @@
+{% extends 'web/base.html' %}
+{% load static %}
+
+{% block title %}Șofer | Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+  <section class="panel hero-panel">
+    <div class="hero-copy">
+      <div class="eyebrow">Dashboard șofer</div>
+      <h1>Vehicul V1</h1>
+      <p>Radar de proximitate • alertă vizuală + sonoră • stare reală și simulare</p>
+    </div>
+    <div class="hero-status">
+      <div class="big-stat">
+        <span class="label">Viteză</span>
+        <strong id="speed-value">--</strong>
+        <small>km/h</small>
+      </div>
+      <div class="big-stat">
+        <span class="label">Direcție</span>
+        <strong id="heading-value">--</strong>
+        <small>°</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel radar-panel">
+    <div class="panel-header">
+      <h2>Radar</h2>
+      <span id="neighbour-count" class="pill-text">0 vecini</span>
+    </div>
+    <svg id="radar-svg" class="radar-svg" viewBox="0 0 500 500" role="img" aria-label="Radar de proximitate"></svg>
+  </section>
+
+  <aside class="panel side-panel">
+    <div class="panel-header">
+      <h2>Stare</h2>
+      <span id="alert-state" class="pill-text neutral">În siguranță</span>
+    </div>
+    <div class="mini-metrics">
+      <div>
+        <span>Dist. de alertă</span>
+        <strong id="distance-value">-- m</strong>
+      </div>
+      <div>
+        <span>Surse</span>
+        <strong id="source-value">--</strong>
+      </div>
+      <div>
+        <span>Expiră</span>
+        <strong id="expires-value">-- s</strong>
+      </div>
+    </div>
+    <div class="checklist">
+      <h3>Pași de pornire</h3>
+      <ul>
+        <li>✔ Hardware detectat</li>
+        <li>✔ Dispozitive conectate</li>
+        <li>✔ Test rulat</li>
+        <li>✔ Simulare pornită</li>
+      </ul>
+    </div>
+  </aside>
+
+  <section class="panel alert-panel hidden" id="alert-panel">
+    <div class="alert-banner">
+      <div>
+        <span class="alert-kicker">ATENȚIE</span>
+        <h3 id="alert-message">IMPACT ÎN FAȚĂ</h3>
+      </div>
+      <button type="button" class="alert-confirm" id="alert-confirm">Confirmă</button>
+    </div>
+  </section>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2>Mapare pini</h2>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Pin</th>
+          <th>Tip</th>
+          <th>Nume</th>
+          <th>Definiție</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pin in pins %}
+          <tr>
+            <td>{{ pin.pin }}</td>
+            <td>{{ pin.tip }}</td>
+            <td>{{ pin.nume }}</td>
+            <td>{{ pin.definitie }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel table-panel">
+    <div class="panel-header">
+      <h2>Vecini relevanți</h2>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sursă</th>
+          <th>Distanță</th>
+          <th>Orientare</th>
+          <th>Viteză</th>
+          <th>Ultimul RX</th>
+        </tr>
+      </thead>
+      <tbody id="neighbours-table-body"></tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ state|json_script:"state-data" }}
+<script src="{% static 'web/js/state.js' %}"></script>
+<script src="{% static 'web/js/radar.js' %}"></script>
+<script src="{% static 'web/js/alert.js' %}"></script>
+{% endblock scripts %}

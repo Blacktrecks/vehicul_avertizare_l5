@@ -59,8 +59,9 @@ def api_alert_ack(request):
 
 @require_POST
 @csrf_protect
-def api_sim_action(request):
-    action = request.POST.get("action") or request.path.rstrip("/").split("/")[-1]
+def api_sim_action(request, action=None):
+    if action is None:
+        action = request.POST.get("action") or request.path.rstrip("/").split("/")[-1]
     if action == "start":
         SERVICE.start()
     elif action == "pause":

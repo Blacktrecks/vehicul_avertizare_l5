@@ -1,0 +1,68 @@
+{% load static %}
+<!doctype html>
+<html lang="ro" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Vehicul Avertizare{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'web/css/app.css' %}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">V</div>
+        <div>
+          <div class="brand-name">AVERTIZARE</div>
+          <div class="brand-sub">Sistem Hibrid de Avertizare Vehicule</div>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Navigare principală">
+        <a class="nav-item active" href="/">Șofer</a>
+        <a class="nav-item" href="/devices/">Dispozitive</a>
+        <a class="nav-item" href="/simulator/">Simulare</a>
+        <a class="nav-item" href="/tests/">Teste</a>
+        <a class="nav-item" href="/stats/">Statistici</a>
+        <a class="nav-item" href="/logs/">Loguri</a>
+        <a class="nav-item" href="/diagnostics/">Diagnoză</a>
+        <a class="nav-item" href="/operator/">Centru</a>
+      </nav>
+
+      <button type="button" class="emergency-button" id="emergency-off">Oprește tot</button>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <div class="status-group">
+          <span class="status-chip ok">Zigbee: OK</span>
+          <span class="status-chip ok">LoRa Meshtastic: OK</span>
+          <span class="status-chip ok">MPU6050: OK</span>
+          <span class="status-chip ok">Buzzer/LED: activ</span>
+        </div>
+        <div class="topbar-right">
+          <span class="badge badge-sim" id="mode-badge">SIMULARE</span>
+          <button type="button" id="theme-toggle" class="theme-toggle">🌙</button>
+          <span class="clock" id="clock">--:--</span>
+        </div>
+      </header>
+
+      {% block content %}{% endblock content %}
+    </main>
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <div id="confirm-dialog" class="modal hidden" aria-modal="true">
+    <div class="modal-card">
+      <h3>Confirmare</h3>
+      <p>Acțiunea este riscantă. Continui?</p>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" data-confirm="cancel">Anulează</button>
+        <button type="button" class="btn-primary" data-confirm="ok">Confirmă</button>
+      </div>
+    </div>
+  </div>
+
+  {% block scripts %}{% endblock scripts %}
+</body>
+</html>

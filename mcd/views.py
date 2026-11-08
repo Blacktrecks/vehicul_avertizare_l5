@@ -11,16 +11,19 @@ from django.views.decorators.http import require_GET
 
 from . import config, i2c, mpu6050
 from . import test as driver_tests
+from web.service import StateService
 
 _selftest_lock = threading.Lock()
 
 
 @require_GET
 def index(request):
-    return render(request, "mcd/index.html", {
+    state = StateService().snapshot()
+    return render(request, "web/dashboard.html", {
         "pins": config.PIN_TABLE,
         "mode": config.simulation_mode(),
         "i2c_simulated": i2c.I2C_bIsSimulated(),
+        "state": state,
     })
 
 
