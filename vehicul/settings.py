@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or (
     "dev-only-schimba-in-productie" if os.environ.get("DJANGO_DEBUG", "0") == "1" else "set-DJANGO_SECRET_KEY"
 )
-DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 _allowed_host_env = os.environ.get(
     "DJANGO_ALLOWED_HOSTS",
     "localhost,127.0.0.1,[::1],0.0.0.0,testserver",

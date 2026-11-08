@@ -1,0 +1,63 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<div class="page-shell">
+  <section class="panel page-panel">
+    <div class="page-header">
+      <div>
+        <div class="eyebrow">Dashboard</div>
+        <h1>{{ section_title }}</h1>
+      </div>
+      <span class="badge badge-sim">LIVE</span>
+    </div>
+
+    <p class="page-subtitle">{{ section_subtitle }}</p>
+
+    {% if metrics %}
+    <div class="metric-grid">
+      {% for metric in metrics %}
+      <div class="metric-card">
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if cards %}
+    <div class="card-grid">
+      {% for card in cards %}
+      <article class="info-card">
+        <div class="mini-label">{{ card.title }}</div>
+        <div class="big-number">{{ card.value }}</div>
+        <div class="muted">{{ card.detail }}</div>
+      </article>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if table_headers %}
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            {% for header in table_headers %}
+            <th>{{ header }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in table_rows %}
+          <tr>
+            {% for cell in row %}
+            <td>{{ cell }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

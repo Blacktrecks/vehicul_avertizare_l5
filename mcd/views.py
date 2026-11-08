@@ -27,6 +27,201 @@ def index(request):
     })
 
 
+def _page(request, title, subtitle, cards, metrics=None, table_headers=None, table_rows=None):
+    return render(request, "web/section_page.html", {
+        "section_title": title,
+        "section_subtitle": subtitle,
+        "cards": cards,
+        "metrics": metrics or [],
+        "table_headers": table_headers or [],
+        "table_rows": table_rows or [],
+    })
+
+
+@require_GET
+def page_devices(request):
+    return _page(
+        request,
+        "Dispozitive",
+        "Manager dispozitive și canale de comunicație",
+        [
+            {"title": "Zigbee", "value": "3 noduri", "detail": "OK / 96% PDR"},
+            {"title": "Meshtastic", "value": "2 noduri", "detail": "Link stabil"},
+            {"title": "MPU6050", "value": "1 modul", "detail": "Simulat"},
+        ],
+        metrics=[
+            {"label": "Scanare USB", "value": "06"},
+            {"label": "Conectate", "value": "05"},
+            {"label": "Lat. medie", "value": "420 ms"},
+            {"label": "Profiluri", "value": "04"},
+        ],
+        table_headers=["Device", "Tip", "Port", "Stare", "Profil"],
+        table_rows=[
+            ["ZB-01", "Zigbee", "/dev/ttyUSB0", "Conectat", "Vehicul"],
+            ["MS-02", "Meshtastic", "/dev/ttyACM0", "Conectat", "Rutină"],
+            ["B1", "GPIO", "BUZZER", "Activ", "Default"],
+            ["L1", "GPIO", "LED", "Activ", "Default"],
+        ],
+    )
+
+
+@require_GET
+def page_simulator(request):
+    return _page(
+        request,
+        "Simulare",
+        "Laborator de scenarii și fault injection",
+        [
+            {"title": "Convoi", "value": "3 vehicule", "detail": "Lat. 480 ms"},
+            {"title": "Impact frontal", "value": "1 scenariu", "detail": "Alertă activă"},
+            {"title": "Replay", "value": "2 atacuri", "detail": "La limită"},
+        ],
+        metrics=[
+            {"label": "Scenarii", "value": "03"},
+            {"label": "Viteză medie", "value": "42 km/h"},
+            {"label": "Risc", "value": "Mediu"},
+            {"label": "Alertă", "value": "Normală"},
+        ],
+        table_headers=["Scenariu", "Tip", "Efect", "Status"],
+        table_rows=[
+            ["Convoi", "Traffic", "Viteză constantă", "Rulează"],
+            ["Impact frontal", "Pericol", "Trigger alertă", "Test"],
+            ["Spoof+replay", "Securitate", "Răspuns activ", "Monitorizat"],
+        ],
+    )
+
+
+@require_GET
+def page_tests(request):
+    return _page(
+        request,
+        "Teste",
+        "Centrală de rulare scenarii și reportare",
+        [
+            {"title": "Self-test", "value": "Pass", "detail": "Driver layer OK"},
+            {"title": "Comms", "value": "4/4", "detail": "Zigbee + LoRa"},
+            {"title": "Rapoarte", "value": "7", "detail": "CSV / JSON / HTML"},
+        ],
+        metrics=[
+            {"label": "Teste rulare", "value": "53"},
+            {"label": "Skipped", "value": "03"},
+            {"label": "Rapoarte", "value": "07"},
+            {"label": "Status", "value": "OK"},
+        ],
+        table_headers=["Test", "Categorie", "Rezultat", "Observații"],
+        table_rows=[
+            ["GPIO chip", "Hardware", "OK", "Detectare stabilă"],
+            ["I2C MPU6050", "Sensor", "OK", "Mag. 1.0g"],
+            ["Alert logic", "Sistem", "OK", "Impact detectat"],
+        ],
+    )
+
+
+@require_GET
+def page_stats(request):
+    return _page(
+        request,
+        "Statistici",
+        "Indicatori de performanță și trenduri",
+        [
+            {"title": "PDR", "value": "96%", "detail": "Last 24h"},
+            {"title": "Lat. avg", "value": "480 ms", "detail": "P95 900 ms"},
+            {"title": "Alerte", "value": "3", "detail": "Ultimele 8h"},
+        ],
+        metrics=[
+            {"label": "Vehicule", "value": "07"},
+            {"label": "Conexiuni", "value": "12"},
+            {"label": "False alarms", "value": "00"},
+            {"label": "SNR", "value": "18 dB"},
+        ],
+        table_headers=["Metrică", "Valoare", "Trend"],
+        table_rows=[
+            ["PDR Zigbee", "96%", "↑ 2%"],
+            ["PDR Meshtastic", "94%", "→"],
+            ["Lat. alertă", "0.42 s", "↓ 0.1 s"],
+        ],
+    )
+
+
+@require_GET
+def page_logs(request):
+    return _page(
+        request,
+        "Loguri",
+        "Flux de evenimente și extragere de date",
+        [
+            {"title": "Sursă", "value": "sim", "detail": "În directoarea logs/"},
+            {"title": "Ultimul eveniment", "value": "2.1s", "detail": "RX Zigbee"},
+            {"title": "Rotație", "value": "5x2MB", "detail": "Auto-rotate"},
+        ],
+        metrics=[
+            {"label": "Level", "value": "INFO"},
+            {"label": "Stream", "value": "Live"},
+            {"label": "Filtre", "value": "04"},
+            {"label": "Export", "value": "CSV"},
+        ],
+        table_headers=["Timp", "Sursă", "Nivel", "Mesaj"],
+        table_rows=[
+            ["17:33:01", "zigbee", "INFO", "Link activ"],
+            ["17:33:04", "sim", "WARN", "Impact în față"],
+            ["17:33:12", "mcd", "INFO", "Self-test complet"],
+        ],
+    )
+
+
+@require_GET
+def page_diagnostics(request):
+    return _page(
+        request,
+        "Diagnoză",
+        "Stare hardware, pin table și verificări active",
+        [
+            {"title": "GPIO", "value": "Detectat", "detail": "Chip selectat"},
+            {"title": "I2C", "value": "OK", "detail": "MPU6050 online"},
+            {"title": "LED/Buzzer", "value": "Testabil", "detail": "Auto-off"},
+        ],
+        metrics=[
+            {"label": "Pini", "value": "08"},
+            {"label": "Buzzer", "value": "0/1"},
+            {"label": "LED", "value": "0/1"},
+            {"label": "Accel", "value": "1.00g"},
+        ],
+        table_headers=["Nume", "Valoare", "Status"],
+        table_rows=[
+            ["I2C_SDA", "GPIO2", "OK"],
+            ["I2C_SCL", "GPIO3", "OK"],
+            ["BUZZER", "GPIO17", "Activ"],
+            ["LED", "GPIO27", "Activ"],
+        ],
+    )
+
+
+@require_GET
+def page_operator(request):
+    return _page(
+        request,
+        "Centru operator",
+        "Vizualizare vehicule, alert list și control central",
+        [
+            {"title": "Vehicule", "value": "07", "detail": "2 periculoase"},
+            {"title": "Harta", "value": "Online", "detail": "SVG fallback"},
+            {"title": "Alertă", "value": "1", "detail": "Neconfirmată"},
+        ],
+        metrics=[
+            {"label": "Noduri LoRa", "value": "04"},
+            {"label": "Rapoarte", "value": "12"},
+            {"label": "Alerte", "value": "01"},
+            {"label": "Operator", "value": "Live"},
+        ],
+        table_headers=["Vehicul", "Coordonate", "Viteză", "Status"],
+        table_rows=[
+            ["V1", "47.15 / 27.59", "42 km/h", "Normal"],
+            ["V2", "47.15 / 27.59", "41 km/h", "Atenție"],
+            ["V3", "47.15 / 27.59", "36 km/h", "Risc"],
+        ],
+    )
+
+
 @require_GET
 def api_pins(request):
     return JsonResponse({"pins": config.PIN_TABLE})

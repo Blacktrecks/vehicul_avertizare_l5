@@ -63,6 +63,19 @@ class ViewTests(SimpleTestCase):
         self.assertTrue(data["ok"], data["log"])
         self.assertGreater(data["tests_run"], 30)
 
+    def test_navigation_pages_exist(self):
+        for path in (
+            "/devices/",
+            "/simulator/",
+            "/tests/",
+            "/stats/",
+            "/logs/",
+            "/diagnostics/",
+            "/operator/",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 200)
+
     def test_post_not_allowed(self):
         self.assertEqual(self.client.post(reverse("mcd:api_pins")).status_code, 405)
         self.assertEqual(self.client.post(reverse("mcd:api_dashboard")).status_code, 405)
