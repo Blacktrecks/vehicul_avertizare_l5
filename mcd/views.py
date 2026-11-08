@@ -7,6 +7,7 @@ import unittest
 
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 
 from . import config, i2c, mpu6050
@@ -16,6 +17,7 @@ from web.service import StateService
 _selftest_lock = threading.Lock()
 
 
+@ensure_csrf_cookie
 @require_GET
 def index(request):
     state = StateService().snapshot()
@@ -38,6 +40,7 @@ def _page(request, title, subtitle, cards, metrics=None, table_headers=None, tab
     })
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_devices(request):
     return _page(
@@ -65,6 +68,7 @@ def page_devices(request):
     )
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_simulator(request):
     return _page(
@@ -91,6 +95,7 @@ def page_simulator(request):
     )
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_tests(request):
     return _page(
@@ -117,6 +122,7 @@ def page_tests(request):
     )
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_stats(request):
     return _page(
@@ -143,6 +149,7 @@ def page_stats(request):
     )
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_logs(request):
     return _page(
@@ -169,6 +176,7 @@ def page_logs(request):
     )
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_diagnostics(request):
     return _page(
@@ -196,6 +204,7 @@ def page_diagnostics(request):
     )
 
 
+@ensure_csrf_cookie
 @require_GET
 def page_operator(request):
     return _page(

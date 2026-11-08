@@ -18,13 +18,16 @@ else:
     ALLOWED_HOSTS = [host.strip() for host in _allowed_host_env.split(",") if host.strip()]
 
 INSTALLED_APPS = [
+    "django.contrib.sessions",
     "django.contrib.staticfiles",
     "mcd.apps.McdConfig",
     "web",
 ]
 
 MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
 ]
 
 ROOT_URLCONF = "vehicul.urls"

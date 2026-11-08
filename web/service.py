@@ -38,7 +38,7 @@ class StateService:
         self._state = {
             "v": 2,
             "ts": time.time(),
-            "mode": "virtual",
+            "mode": "simulation",
             "ego": {"id": "V1", "lat": 47.15, "lon": 27.59, "speed_kmh": 42, "heading_deg": 90},
             "neighbours": [],
             "alert": {"active": False, "type": None, "source": None, "distance_m": None, "expires_in_s": None},
@@ -48,7 +48,11 @@ class StateService:
                 "zigbee": {"state": "ok", "last_rx_s": 0.4, "rx": 120, "tx": 120, "err": 0},
                 "meshtastic": {"state": "ok", "last_rx_s": 12.0, "rx": 4, "tx": 4, "err": 0},
             },
-            "devices": [],
+            "devices": [
+                {"id": "ZB-01", "type": "zigbee", "port": "/dev/ttyUSB0", "status": "online", "rssi_dbm": -60},
+                {"id": "MS-02", "type": "meshtastic", "port": "/dev/ttyACM0", "status": "online", "rssi_dbm": -68},
+                {"id": "MPU-6050", "type": "i2c", "port": "I2C-1", "status": "online", "rssi_dbm": None},
+            ],
             "stats": {"pdr_pct": 96.0, "latency_ms": {"min": 210, "avg": 480, "p95": 900}, "alerts": 3, "false_alarms": 0, "rejected": 2},
             "drivers": {"gpio": "simulated", "i2c": "simulated", "usb_zigbee": "simulated", "usb_meshtastic": "simulated"},
         }
@@ -96,7 +100,15 @@ class StateService:
 
     def set_mode(self, mode):
         with self._lock:
-            self._state["mode"] = mode
+            normalized = str(mode or "").strip().lower()
+            if normalized in ("sim", "simulation", "virtual"):
+                self._state["mode"] = "simulation"
+                self._state["drivers"] = {"gpio": "simulated", "i2c": "simulated", "usb_zigbee": "simulated", "usb_meshtastic": "simulated"}
+            elif normalized in ("hw", "hardware", "real"):
+                self._state["mode"] = "hardware"
+                self._state["drivers"] = {"gpio": "hardware", "i2c": "hardware", "usb_zigbee": "hardware", "usb_meshtastic": "hardware"}
+            else:
+                raise ValueError("mod invalid: alege simulation sau hardware")
 
     def inject_impact(self):
         self._fleet.inject_impact()

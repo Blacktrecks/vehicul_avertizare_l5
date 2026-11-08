@@ -26,8 +26,8 @@ def api_stream(request):
     return StreamingHttpResponse(stream(), content_type="text/event-stream")
 
 
-@require_POST
 @csrf_protect
+@require_POST
 def api_outputs(request):
     try:
         payload = json.loads(request.body or b"{}")
@@ -43,22 +43,37 @@ def api_outputs(request):
         return JsonResponse({"error": str(exc)}, status=400)
 
 
-@require_POST
 @csrf_protect
+@require_POST
 def api_outputs_off(request):
     SERVICE.set_outputs_off()
     return JsonResponse({"ok": True, "state": SERVICE.snapshot()})
 
 
-@require_POST
 @csrf_protect
+@require_POST
 def api_alert_ack(request):
     SERVICE.ack_alert()
     return JsonResponse({"ok": True, "state": SERVICE.snapshot()})
 
 
-@require_POST
 @csrf_protect
+@require_POST
+def api_mode(request):
+    try:
+        payload = json.loads(request.body or b"{}") if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON invalid"}, status=400)
+    mode = payload.get("mode") or request.POST.get("mode") or "simulation"
+    try:
+        SERVICE.set_mode(mode)
+        return JsonResponse({"ok": True, "state": SERVICE.snapshot()})
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+
+@csrf_protect
+@require_POST
 def api_sim_action(request, action=None):
     if action is None:
         action = request.POST.get("action") or request.path.rstrip("/").split("/")[-1]
@@ -81,6 +96,5 @@ def api_logs(request):
 
 
 @require_POST
-@csrf_protect
 def api_selftest(request):
     return JsonResponse({"ok": True, "name": "selftest"})

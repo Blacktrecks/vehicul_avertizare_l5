@@ -1,4 +1,5 @@
 """Teste pentru stratul Django (necesită Django: python manage.py test)."""
+import json
 import os
 
 from django.test import SimpleTestCase
@@ -75,6 +76,39 @@ class ViewTests(SimpleTestCase):
         ):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 200)
+
+    def test_api_mode_toggle(self):
+        resp = self.client.post(
+            "/api/mode/",
+            data={"mode": "simulation"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["state"]["mode"], "simulation")
+
+        resp = self.client.post(
+            "/api/mode/",
+            data={"mode": "hardware"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["state"]["mode"], "hardware")
+
+    def test_api_mode_toggle_with_csrf(self):
+        client = self.client_class(enforce_csrf_checks=True)
+        resp = client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        csrf_token = resp.cookies.get("csrftoken")
+        self.assertIsNotNone(csrf_token)
+
+        resp = client.post(
+            "/api/mode/",
+            data=json.dumps({"mode": "hardware"}),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token.value,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["state"]["mode"], "hardware")
 
     def test_post_not_allowed(self):
         self.assertEqual(self.client.post(reverse("mcd:api_pins")).status_code, 405)

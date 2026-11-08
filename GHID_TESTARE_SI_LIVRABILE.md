@@ -65,7 +65,85 @@ DJANGO_ALLOWED_HOSTS='*' python manage.py runserver 0.0.0.0:8000
 ```
 Deschide `http://Pi4Master.local:8000/` din laptop (același WiFi). Pe ecranul de 7": Chromium în mod kiosk.
 
-### 1.6 Notă despre GPIO
+### 1.6 Simulare vs hardware real
+
+Proiectul este conceput pentru a funcționa în două moduri distincte:
+
+- `MCD_SIMULATE=1` -> forțează simularea completă; potrivit pentru dezvoltare, demo, dashboard și validare logică fără dispozitive fizice.
+- `MCD_SIMULATE=0` -> forțează modulul hardware; aplicația încearcă să folosească GPIO, I2C, porturi seriale și noduri Meshtastic/Zigbee reale.
+- `MCD_SIMULATE=auto` sau variabila necompletată -> se folosește hardware dacă este disponibil, altfel se activează simularea.
+
+Comenzile rapide:
+
+```bash
+# SIMULARE
+MCD_SIMULATE=1 python manage.py runserver 0.0.0.0:8000
+
+# HARDWARE REAL
+MCD_SIMULATE=0 python manage.py runserver 0.0.0.0:8000
+
+# VERIFICARE PORTURI
+ls /dev/ttyUSB*
+ls /dev/ttyACM*
+
+# VERIFICARE MESHSTASTIC
+meshtastic --port /dev/ttyACM0 --info
+```
+
+Important: conectarea fizică a unui dispozitiv nu este suficientă. Sistemul funcționează numai dacă:
+
+- portul USB este detectat corect de Linux
+- dispozitivul este configurat cu aceeași regiune, canal și cheie pe toate nodurile Meshtastic
+- aplicația rulează în mod hardware, nu în simulare
+- permisiunile de acces la portul serial sunt corecte
+
+### 1.7 Cum adaugi un dispozitiv Meshtastic Heltec V3
+
+Dacă ai un Heltec V3 (sau orice altă plăcuță Meshtastic), nu trebuie să schimbi codul aplicației ca să-l vezi. Procedura este:
+
+1. Flash-ează firmware Meshtastic stabil din Web Flasher sau din `meshtastic` CLI.
+2. Conectează placa la Pi prin USB serial sau prin WiFi/TCP.
+3. Verifică portul:
+   ```bash
+   ls /dev/ttyACM*
+   ls /dev/serial/by-id/
+   ```
+4. Rulează:
+   ```bash
+   meshtastic --port /dev/ttyACM0 --info
+   ```
+   sau, dacă este WiFi:
+   ```bash
+   meshtastic --host 192.168.1.50 --info
+   ```
+5. Setează aceeași regiune, presetul și canal pe toate dispozitivele (`EU_868`, același canal/PSK).
+6. Repornește dispozitivul dacă ai schimbat profilul.
+7. În interfața aplicației, placa va apărea ca nod Meshtastic. Dacă folosești USB, apare ca port serial (`/dev/ttyACM*` sau `/dev/ttyUSB*`). Dacă folosești WiFi, apare ca nod TCP la IP + port 4403.
+
+Dacă nu ai încă portul, aplicația rămâne în simulare și indică clar acest lucru. Nu „îl inventează” ca real dacă nu există conexiunea activă.
+
+### 1.8 Este Heltec V3 văzut?
+
+Da, dacă este conectat fizic prin USB sau este accesibil pe rețea prin WiFi. Sistemul îl recunoaște ca dispozitiv Meshtastic dacă:
+
+- portul este valid și disponibil;
+- firmware-ul este Meshtastic (nu un USB generic sau altă aplicație);
+- placa este respectiv conectată la aceeași rețea / canal / cheie;
+- aplicația rulează în modul hardware (`MCD_SIMULATE=0`).
+
+În cazul WiFi, nu este nevoie să fie legat la USB, ci doar să fie în aceeași LAN și accesibil prin TCP 4403.
+
+### 1.9 Ce suportă aplicația
+
+Aplicația suportă Meshtastic ca transport de comunicație între noduri. Nu este un gateway LoRaWAN și nu are nevoie de ChirpStack. În practică:
+
+- USB serial: cel mai stabil și recomandat pentru dezvoltare și testare locală;
+- WiFi/TCP: util pentru noduri Meshtastic care sunt pe aceeași rețea;
+- simulare: utilizată când nu există hardware sau când vrei să testelezi logica de alertă fără echipament real.
+
+Ghidul complet cu explicații detaliate, checklist și scenarii de testare este în `docs/testare_pi_simulare_hardware.md`.
+
+### 1.7 Notă despre GPIO
 În `mcd/pcs.py`, funcția `_resolve_gpiochip` întoarce constante (4 / 4 / 0) în loc de numărul chip-ului găsit. Acum merge doar datorită fallback-ului `[4, 0]`. Faza 0 din fișierul nou de instrucțiuni o corectează.
 
 ---

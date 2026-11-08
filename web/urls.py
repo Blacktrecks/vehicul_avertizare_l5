@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("state/", views.api_state, name="api_state"),
+    path("mode/", views.api_mode, name="api_mode"),
     path("stream/", views.api_stream, name="api_stream"),
     path("outputs/", views.api_outputs, name="api_outputs"),
     path("outputs/off/", views.api_outputs_off, name="api_outputs_off"),

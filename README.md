@@ -55,6 +55,43 @@ MCD_HW_TESTS=1 python -m mcd.test HardwareSmokeTest   # pulsează LED/buzzer, ci
 
 Porturile USB implicite: `/dev/ttyUSB0` (XBee3, 9600 baud), `/dev/ttyACM0` (Meshtastic, 115200 baud). Se pot schimba cu `MCD_ZIGBEE_PORT` și `MCD_MESHTASTIC_PORT`.
 
+## Testare pe Raspberry Pi, simulare și hardware real
+
+Pentru ghidul complet cu comenzi, verificări, Meshtastic și teste de validare pe Pi, vezi:
+
+- `docs/testare_pi_simulare_hardware.md`
+- `GHID_TESTARE_SI_LIVRABILE.md`
+
+### Adăugarea unui Heltec V3 / Meshtastic
+
+Dacă conectezi un Heltec V3:
+
+```bash
+ls /dev/ttyACM*
+meshtastic --port /dev/ttyACM0 --info
+# sau, pe WiFi:
+meshtastic --host 192.168.1.50 --info
+```
+
+Dacă placa este validă, apare în aplicație ca nod Meshtastic. Se recomandă USB serial pentru testare locală și WiFi/TCP dacă placa este la distanță pe aceeași rețea. Pentru Meshtastic există și conexiune TCP pe port 4403, dar USB este preferat pentru debug rapid.
+
+Comenzi rapide:
+
+```bash
+# simulare
+MCD_SIMULATE=1 python manage.py runserver 0.0.0.0:8000
+
+# hardware real
+MCD_SIMULATE=0 python manage.py runserver 0.0.0.0:8000
+
+# verificare porturi
+ls /dev/ttyUSB*
+ls /dev/ttyACM*
+
+# verificare Meshtastic
+meshtastic --port /dev/ttyACM0 --info
+```
+
 ## Observații
 
 - `MPU6050_vInit` acceptă doar WHO_AM_I = 0x68; unele plăci clonă raportează altă valoare.
