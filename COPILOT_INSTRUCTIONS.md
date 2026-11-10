@@ -134,7 +134,7 @@ A top navigation (or hidden long-press menu on the kiosk) switches pages. All pa
 > Implement `/operator/` as in section 4.4 with locally vendored Leaflet and an offline SVG fallback, alert list with acknowledge, vehicle table with age colouring. Vehicles come from the simulated LoRa reports in simulation mode.
 
 ### Phase 6 – Documentation and traceability
-> Update `README.md` (run on PC, run on Pi 4/Pi 5, env variables, wiring). Create `docs/wiring.md` with a Mermaid wiring diagram and a pin table, `docs/api.md`, `docs/requirements_trace.md` (table CF1–CF10 and CNF1–CNF8 → module → test), and `docs/hazards.md` (false alarm, missed alarm, delayed alarm, spoofed alarm → mitigation). Keep Romanian text with correct diacritics where the lab documents are Romanian.
+> Update `README.md` (run on PC, run on Pi 4/Pi 5, env variables, wiring). Create `docs/wiring.md` with a Mermaid wiring diagram and a , `docs/api.md`, `docs/requirements_trace.md` (table CF1–CF10 and CNF1–CNF8 → module → test), and `docs/hazards.md` (false alarm, missed alarm, delayed alarm, spoofed alarm → mitigation). Keep Romanian text with correct diacritics where the lab documents are Romanian.
 
 ## 6. Definition of done (each phase)
 
