@@ -8,6 +8,8 @@ import socket
 from pathlib import Path
 from typing import Any
 
+from .profile import ProjectProfile
+
 
 def _is_likely_hardware_serial_port(device: str, description: str = "", hwid: str = "") -> bool:
     """Keep only real USB serial devices and ignore Linux system console ports."""
@@ -100,6 +102,8 @@ class DeviceRegistry:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
             self._save([])
+        self._active_links: dict[str, Any] = {}
+        self._project_profile = ProjectProfile()
 
     def _load(self) -> list[dict[str, Any]]:
         try:
@@ -201,6 +205,63 @@ class DeviceRegistry:
             return MeshtasticLink(host=host, portnum=port, name=str(device.get("id") or "tcp"))
         return None
 
+    def _resolve_node_id(self, device: dict[str, Any]) -> str:
+        node = str(device.get("node_id") or "").strip()
+        if node:
+            return node
+        role = str(device.get("role") or "").lower()
+        if "v2" in role:
+            return "V2"
+        if "v3" in role:
+            return "V3"
+        return str(device.get("id") or "pi")
+
+    def _test_payload(self, device: dict[str, Any]) -> str:
+        label = str(device.get("label") or device.get("id") or "XIAO")
+        node = self._resolve_node_id(device)
+        return f"TEST-MESH {label} {node} meshtastic_ok"
+
+    def profile_preview(self, device_id: str) -> dict[str, Any]:
+        device = self.get_device(device_id)
+        if device is None:
+            raise KeyError("device not found")
+        current = {
+            "region": str(device.get("region") or "UNKNOWN"),
+            "preset": str(device.get("preset") or "UNKNOWN"),
+            "channel_name": str(device.get("channel_name") or "UNKNOWN"),
+        }
+        target = self._project_profile.as_dict()
+        diff = self._project_profile.diff(current)
+        return {
+            "device_id": device_id,
+            "target": target,
+            "current": current,
+            "diff": diff,
+            "compatible": not bool(diff),
+        }
+
+    def apply_profile(self, device_id: str) -> dict[str, Any]:
+        device = self.get_device(device_id)
+        if device is None:
+            raise KeyError("device not found")
+        target = self._project_profile.as_dict()
+        device["region"] = target["region"]
+        device["preset"] = target["preset"]
+        device["channel_name"] = target["channel_name"]
+        device["last_action"] = "apply-profile"
+        device["last_message"] = "Profil aplicat: EU_868 / LONG_FAST / VEH"
+        if device.get("state") != "error":
+            device["state"] = "connected"
+        self._save_device(device)
+        return {
+            "device": device,
+            "result": {
+                "ok": True,
+                "message": device["last_message"],
+                "target": target,
+            },
+        }
+
     def probe_device(self, device: dict[str, Any]) -> dict[str, Any]:
         transport = str(device.get("transport") or "sim").strip().lower()
         if transport in {"sim", "simulated"}:
@@ -220,7 +281,16 @@ class DeviceRegistry:
         device = self.get_device(device_id)
         if device is None:
             raise KeyError("device not found")
-        result = self.probe_device(device)
+        link = self._build_link(device)
+        if link is None:
+            result = self.probe_device(device)
+        else:
+            opened = bool(link.connect())
+            if opened:
+                self._active_links[device_id] = link
+                result = {"ok": True, "message": "Conectare Meshtastic activă"}
+            else:
+                result = self.probe_device(device)
         device["last_action"] = "connect"
         device["last_message"] = result["message"]
         device["state"] = "connected" if result["ok"] else "error"
@@ -231,9 +301,15 @@ class DeviceRegistry:
         device = self.get_device(device_id)
         if device is None:
             raise KeyError("device not found")
+        link = self._active_links.pop(device_id, None)
+        if link is not None:
+            try:
+                link.disconnect()
+            except Exception:
+                pass
         device["state"] = "disconnected"
         device["last_action"] = "disconnect"
-        device["last_message"] = "Dispozitiv deconectat logic"
+        device["last_message"] = "Dispozitiv deconectat"
         self._save_device(device)
         return {"device": device, "result": {"ok": True, "message": device["last_message"]}}
 
@@ -242,22 +318,29 @@ class DeviceRegistry:
         if device is None:
             raise KeyError("device not found")
 
-        link = self._build_link(device)
+        node_id = self._resolve_node_id(device)
+        test_text = self._test_payload(device)
+        link = self._active_links.get(device_id) or self._build_link(device)
         if link is not None:
+            transport_name = str(device.get("transport") or "serial").strip().lower()
             try:
-                link.connect()
-                sent = link.send_text(str(device.get("id") or "pi"), "PING")
+                if not link.is_connected():
+                    link.connect()
+                sent = link.send_text(node_id, test_text)
                 status_ok = sent > 0 or link.is_connected()
-                message = f"Ping OK ({sent} bytes sent)" if status_ok else "Ping failed"
+                if status_ok:
+                    message = f"Test transmis către {node_id} prin {transport_name}: {sent} bytes (Meshtastic)."
+                else:
+                    message = f"Test eșuat prin {transport_name}: niciun payload nu a fost confirmat."
                 result = {"ok": status_ok, "message": message}
-                if link.is_connected():
+                if link.is_connected() and device_id not in self._active_links:
                     link.disconnect()
             except Exception as exc:  # pragma: no cover - hardware/network volatility
-                result = {"ok": False, "message": str(exc)}
+                result = {"ok": False, "message": f"Test eșuat prin {transport_name}: {exc}"}
         else:
             result = self.probe_device(device)
             if result["ok"]:
-                result["message"] = "Ping OK (simulated)"
+                result["message"] = f"Test dummy rulat pentru {node_id}: payload simulat validat."
 
         device["last_action"] = "send-test"
         device["last_test"] = "ok" if result["ok"] else "failed"
@@ -265,10 +348,15 @@ class DeviceRegistry:
         if result["ok"]:
             device["state"] = "connected"
         self._save_device(device)
-        return {"device": device, "result": result}
+        return {"device": device, "result": result, "preview": {"node": node_id, "payload": test_text}}
 
     def scan(self) -> list[dict[str, Any]]:
         devices = self._load()
+        by_address = {
+            str(item.get("address") or item.get("port") or "").strip(): item
+            for item in devices
+            if (item.get("address") or item.get("port"))
+        }
         ports = scan_serial_ports()
         if ports:
             detected = []
@@ -292,17 +380,22 @@ class DeviceRegistry:
                 label = port.get("label") or description or device
                 if not label or str(label).lower() in {"n/a", "na", "unknown"}:
                     label = device
+                existing = by_address.get(device)
                 record = {
-                    "id": re.sub(r"[^a-zA-Z0-9]+", "-", device).strip("-") or f"dev-{len(detected)+1}",
+                    "id": (existing or {}).get("id") or (re.sub(r"[^a-zA-Z0-9]+", "-", device).strip("-") or f"dev-{len(detected)+1}"),
                     "label": label,
                     "type": "meshtastic" if ("heltec" in lower or "meshtastic" in lower or "xiao" in lower or "esp32" in lower) else "zigbee",
                     "transport": transport,
                     "address": device,
                     "port": device,
                     "role": role,
-                    "state": "connected",
+                    "state": (existing or {}).get("state") or "connected",
                     "description": description,
                     "hwid": hwid,
+                    "region": (existing or {}).get("region") or "UNKNOWN",
+                    "preset": (existing or {}).get("preset") or "UNKNOWN",
+                    "channel_name": (existing or {}).get("channel_name") or "UNKNOWN",
+                    "last_message": (existing or {}).get("last_message") or "",
                 }
                 detected.append(record)
             if detected:

@@ -73,7 +73,8 @@
       <div class="device-form compact-device-form">
         <div class="device-field wide">
           <label>Detectare automată</label>
-          <div class="device-note">Caută automat porturi USB seriale, Meshtastic și noduri pe WiFi/TCP, apoi pregătește fiecare conexiune pentru test real.</div>
+          <div class="device-note">Caută automat porturi USB seriale, Meshtastic și noduri pe WiFi/TCP, apoi pregătește
+            fiecare conexiune pentru test real.</div>
         </div>
       </div>
 
@@ -84,12 +85,29 @@
               <th>Device</th>
               <th>Tip</th>
               <th>Adresă</th>
+              <th>Profil</th>
               <th>Stare</th>
               <th>Acțiuni</th>
             </tr>
           </thead>
           <tbody id="device-table-body"></tbody>
         </table>
+      </div>
+
+      <div class="device-panels">
+        <article class="info-card device-feedback-card">
+          <div class="mini-label">Profil dispozitiv</div>
+          <div class="device-preview" id="device-profile-preview">
+            Selectează un dispozitiv și apasă „Preview profil”.
+          </div>
+        </article>
+
+        <article class="info-card device-feedback-card">
+          <div class="mini-label">Feedback test Meshtastic</div>
+          <div class="device-feedback" id="device-test-feedback">
+            Rulează „Test” pentru a vedea payload-ul trimis către dispozitivul XIAO/Heltec.
+          </div>
+        </article>
       </div>
     </div>
     {% endif %}

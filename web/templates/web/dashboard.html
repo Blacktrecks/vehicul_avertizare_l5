@@ -212,12 +212,12 @@
       </thead>
       <tbody>
         {% for pin in pins %}
-          <tr>
-            <td>{{ pin.pin }}</td>
-            <td>{{ pin.tip }}</td>
-            <td>{{ pin.nume }}</td>
-            <td>{{ pin.definitie }}</td>
-          </tr>
+        <tr>
+          <td>{{ pin.pin }}</td>
+          <td>{{ pin.tip }}</td>
+          <td>{{ pin.nume }}</td>
+          <td>{{ pin.definitie }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -246,7 +246,6 @@
 
 {% block scripts %}
 {{ state|json_script:"state-data" }}
-<script src="{% static 'web/js/state.js' %}"></script>
 <script src="{% static 'web/js/radar.js' %}"></script>
 <script src="{% static 'web/js/alert.js' %}"></script>
 {% endblock scripts %}

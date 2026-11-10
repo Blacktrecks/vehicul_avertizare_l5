@@ -1,15 +1,22 @@
 {% load static %}
 <!doctype html>
 <html lang="ro" data-theme="dark">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Vehicul Avertizare{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'web/css/app.css' %}">
 </head>
+
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="app-sidebar" aria-label="Navigare principală">
+      <button type="button" class="sidebar-toggle" id="sidebar-toggle" aria-label="Comută bara laterală"
+        aria-expanded="false">
+        <span class="sidebar-toggle-bars" aria-hidden="true"></span>
+      </button>
+
       <div class="brand-block">
         <div class="brand-mark">V</div>
         <div>
@@ -19,14 +26,38 @@
       </div>
 
       <nav class="nav" aria-label="Navigare principală">
-        <a class="nav-item active" href="/">Șofer</a>
-        <a class="nav-item" href="/devices/">Dispozitive</a>
-        <a class="nav-item" href="/simulator/">Simulare</a>
-        <a class="nav-item" href="/tests/">Teste</a>
-        <a class="nav-item" href="/stats/">Statistici</a>
-        <a class="nav-item" href="/logs/">Loguri</a>
-        <a class="nav-item" href="/diagnostics/">Diagnoză</a>
-        <a class="nav-item" href="/operator/">Centru</a>
+        <a class="nav-item" href="/" data-nav="sofer" title="Șofer">
+          <span class="nav-icon" aria-hidden="true">SD</span>
+          <span class="nav-label">Șofer</span>
+        </a>
+        <a class="nav-item" href="/devices/" data-nav="devices" title="Dispozitive">
+          <span class="nav-icon" aria-hidden="true">DV</span>
+          <span class="nav-label">Dispozitive</span>
+        </a>
+        <a class="nav-item" href="/simulator/" data-nav="sim" title="Simulare">
+          <span class="nav-icon" aria-hidden="true">SM</span>
+          <span class="nav-label">Simulare</span>
+        </a>
+        <a class="nav-item" href="/tests/" data-nav="tests" title="Teste">
+          <span class="nav-icon" aria-hidden="true">TS</span>
+          <span class="nav-label">Teste</span>
+        </a>
+        <a class="nav-item" href="/stats/" data-nav="stats" title="Statistici">
+          <span class="nav-icon" aria-hidden="true">ST</span>
+          <span class="nav-label">Statistici</span>
+        </a>
+        <a class="nav-item" href="/logs/" data-nav="logs" title="Loguri">
+          <span class="nav-icon" aria-hidden="true">LG</span>
+          <span class="nav-label">Loguri</span>
+        </a>
+        <a class="nav-item" href="/diagnostics/" data-nav="diag" title="Diagnoză">
+          <span class="nav-icon" aria-hidden="true">DG</span>
+          <span class="nav-label">Diagnoză</span>
+        </a>
+        <a class="nav-item" href="/operator/" data-nav="operator" title="Centru">
+          <span class="nav-icon" aria-hidden="true">CT</span>
+          <span class="nav-label">Centru</span>
+        </a>
       </nav>
 
       <button type="button" class="emergency-button" id="emergency-off">Oprește tot</button>
@@ -67,6 +98,94 @@
   </div>
 
   <script src="{% static 'web/js/state.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.documentElement;
+      const sidebar = document.getElementById('app-sidebar');
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+      const currentPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+      document.querySelectorAll('.nav-item').forEach((link) => {
+        const hrefPath = (link.getAttribute('href') || '/').replace(/\/+$/, '') || '/';
+        const isActive = hrefPath === currentPath || (currentPath === '/' && hrefPath === '/');
+        link.classList.toggle('active', isActive);
+        if (isActive) {
+          link.setAttribute('aria-current', 'page');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+
+      const syncSidebarToggleState = () => {
+        if (!sidebarToggle) {
+          return;
+        }
+        const isCollapsed = root.classList.contains('sidebar-collapsed');
+        sidebarToggle.setAttribute('aria-expanded', String(!isCollapsed));
+      };
+
+      const applyInitialSidebar = () => {
+        if (!sidebar) {
+          return;
+        }
+        const viewportSmall = window.innerWidth <= 1180;
+        let collapsed = viewportSmall;
+        try {
+          const saved = window.localStorage.getItem('vehicul-sidebar-collapsed');
+          if (saved !== null) {
+            collapsed = saved === '1';
+          }
+        } catch (error) {
+          console.warn('Sidebar state unavailable:', error);
+        }
+        root.classList.toggle('sidebar-collapsed', collapsed);
+        syncSidebarToggleState();
+      };
+
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+          root.classList.toggle('sidebar-collapsed');
+          const collapsed = root.classList.contains('sidebar-collapsed');
+          try {
+            window.localStorage.setItem('vehicul-sidebar-collapsed', collapsed ? '1' : '0');
+          } catch (error) {
+            console.warn('Sidebar state unavailable:', error);
+          }
+          syncSidebarToggleState();
+        });
+      }
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth <= 1180) {
+          root.classList.add('sidebar-collapsed');
+          syncSidebarToggleState();
+        }
+      });
+
+      if (sidebar) {
+        sidebar.addEventListener('pointerup', () => {
+          sidebar.querySelectorAll('.nav-item').forEach((link) => link.blur());
+        });
+      }
+
+      document.querySelectorAll('.nav-item').forEach((link) => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 900) {
+            root.classList.add('sidebar-collapsed');
+            syncSidebarToggleState();
+          }
+        });
+      });
+
+      applyInitialSidebar();
+      syncSidebarToggleState();
+      document.querySelectorAll('.nav-item').forEach((link) => {
+        link.addEventListener('pointerup', () => {
+          link.blur();
+        });
+      });
+    });
+  </script>
   {% block scripts %}{% endblock scripts %}
 </body>
+
 </html>

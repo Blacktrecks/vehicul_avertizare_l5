@@ -110,6 +110,44 @@ class DeviceRegistryTests(unittest.TestCase):
             self.assertEqual(disconnected["device"]["state"], "disconnected")
             self.assertIn("deconectat", disconnected["result"]["message"].lower())
 
+    def test_profile_preview_and_apply(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = DeviceRegistry(Path(temp_dir) / "devices.json")
+            registry.add_device({
+                "id": "xiao-1",
+                "label": "XIAO",
+                "transport": "sim",
+                "address": "sim://xiao-1",
+                "region": "US_915",
+                "preset": "SHORT_FAST",
+                "channel_name": "LAB",
+            })
+            preview = registry.profile_preview("xiao-1")
+            self.assertFalse(preview["compatible"])
+            self.assertIn("region", preview["diff"])
+
+            applied = registry.apply_profile("xiao-1")
+            self.assertTrue(applied["result"]["ok"])
+            self.assertEqual(applied["device"]["region"], "EU_868")
+            self.assertEqual(applied["device"]["preset"], "LONG_FAST")
+            self.assertEqual(applied["device"]["channel_name"], "VEH")
+
+    def test_scan_preserves_disconnected_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = DeviceRegistry(Path(temp_dir) / "devices.json")
+            registry.add_device({
+                "id": "dev-ttyacm0",
+                "label": "XIAO",
+                "transport": "serial",
+                "address": "/dev/ttyACM0",
+                "port": "/dev/ttyACM0",
+                "state": "disconnected",
+            })
+            fake_ports = [{"device": "/dev/ttyACM0", "description": "XIAO ESP32S3", "hwid": "USB"}]
+            with patch("sdc.registry.scan_serial_ports", return_value=fake_ports):
+                devices = registry.scan()
+            self.assertEqual(devices[0]["state"], "disconnected")
+
     def test_log_store_records_and_reads_entries(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             logger = LogStore(path=Path(temp_dir) / "vehicul.log")

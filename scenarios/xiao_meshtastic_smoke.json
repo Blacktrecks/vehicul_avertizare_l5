@@ -1,0 +1,30 @@
+{
+  "v": 1,
+  "name": "XIAO Meshtastic Smoke",
+  "target_roles": [
+    "Vehicul Meshtastic",
+    "Centru"
+  ],
+  "steps": [
+    {
+      "op": "connect",
+      "device": "dev-ttyACM0"
+    },
+    {
+      "op": "send_text",
+      "from": "dev-ttyACM0",
+      "to": "^all",
+      "text": "test xiao meshtastic"
+    },
+    {
+      "op": "expect_rx",
+      "device": "dev-ttyACM0",
+      "within_s": 5,
+      "min_count": 1
+    },
+    {
+      "op": "disconnect",
+      "device": "dev-ttyACM0"
+    }
+  ]
+}
