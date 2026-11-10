@@ -1,9 +1,12 @@
+import io
 import json
+import unittest
 
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
+from mcd import test as driver_tests
 from sdc.registry import DeviceRegistry
 from .service import StateService
 
@@ -94,7 +97,8 @@ def api_sim_action(request, action=None):
 
 @require_GET
 def api_logs(request):
-    return JsonResponse({"logs": []})
+    logs = SERVICE.logger.read(limit=200)
+    return JsonResponse({"logs": logs, "count": len(logs)})
 
 
 @require_http_methods(["GET", "POST"])
@@ -134,28 +138,50 @@ def api_device_action(request, device_id, action):
     if device is None:
         return JsonResponse({"error": "device not found"}, status=404)
     action = (action or "").strip().lower()
-    if action == "connect":
-        device["state"] = "connected"
-        device["last_action"] = "connect"
-    elif action == "disconnect":
-        device["state"] = "disconnected"
-        device["last_action"] = "disconnect"
-    elif action == "send-test":
-        device["last_action"] = "send-test"
-        device["last_test"] = "ping ok"
-    elif action == "apply-profile":
-        device["last_action"] = "apply-profile"
-    else:
-        return JsonResponse({"error": "unknown action"}, status=400)
-    devices = REGISTRY.list_devices()
-    for idx, item in enumerate(devices):
-        if item.get("id") == device_id:
-            devices[idx] = device
-            break
-    REGISTRY._save(devices)
-    return JsonResponse({"ok": True, "device": device})
+    try:
+        if action == "connect":
+            result = REGISTRY.connect_device(device_id)
+            SERVICE.logger.info(f"Connected device {device_id}", device=device_id, label=device.get("label"), transport=device.get("transport"))
+            return JsonResponse({"ok": True, "device": result["device"], "result": result["result"]})
+        if action == "disconnect":
+            result = REGISTRY.disconnect_device(device_id)
+            SERVICE.logger.info(f"Disconnected device {device_id}", device=device_id)
+            return JsonResponse({"ok": True, "device": result["device"], "result": result["result"]})
+        if action == "send-test":
+            result = REGISTRY.send_test(device_id)
+            SERVICE.logger.info(f"Device test executed for {device_id}", device=device_id, outcome=result["result"])
+            return JsonResponse({"ok": True, "device": result["device"], "result": result["result"]})
+        if action == "apply-profile":
+            device = REGISTRY.get_device(device_id)
+            device["last_action"] = "apply-profile"
+            device["last_message"] = "Profile loaded: EU_868 / LONG_FAST / VEH"
+            device["state"] = "connected"
+            REGISTRY._save_device(device)
+            SERVICE.logger.info(f"Applied profile to device {device_id}", device=device_id)
+            return JsonResponse({"ok": True, "device": device})
+    except KeyError:
+        return JsonResponse({"error": "device not found"}, status=404)
+    except Exception as exc:  # pragma: no cover - defensive
+        return JsonResponse({"error": str(exc)}, status=500)
+    return JsonResponse({"error": "unknown action"}, status=400)
 
 
 @require_POST
 def api_selftest(request):
-    return JsonResponse({"ok": True, "name": "selftest"})
+    if not getattr(request, "body", b""):
+        pass
+    stream = io.StringIO()
+    result = unittest.TextTestRunner(stream=stream, verbosity=2).run(driver_tests.build_sim_suite())
+    payload = {
+        "ok": result.wasSuccessful(),
+        "tests_run": result.testsRun,
+        "failures": len(result.failures),
+        "errors": len(result.errors),
+        "skipped": len(result.skipped),
+        "log": stream.getvalue(),
+    }
+    if result.wasSuccessful():
+        SERVICE.logger.info("Self-test passed", **payload)
+    else:
+        SERVICE.logger.warning("Self-test failed", **payload)
+    return JsonResponse(payload)

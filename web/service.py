@@ -1,6 +1,54 @@
 import json
 import threading
 import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+class LogStore:
+    """Persist simple application log entries to a JSONL file."""
+
+    def __init__(self, path: str | Path | None = None):
+        base_dir = Path(__file__).resolve().parent.parent
+        self.path = Path(path) if path is not None else base_dir / "logs" / "system.log"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.touch(exist_ok=True)
+
+    def _record(self, level: str, message: str, **extra):
+        entry = {
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "level": level,
+            "message": str(message),
+        }
+        if extra:
+            entry.update(extra)
+        with self.path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        return entry
+
+    def info(self, message: str, **extra):
+        return self._record("INFO", message, **extra)
+
+    def warning(self, message: str, **extra):
+        return self._record("WARNING", message, **extra)
+
+    def error(self, message: str, **extra):
+        return self._record("ERROR", message, **extra)
+
+    def read(self, limit: int = 200):
+        if not self.path.exists():
+            return []
+        entries = []
+        with self.path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    payload = {"message": line.strip()}
+                entries.append(payload)
+        return entries[-limit:]
 
 
 class SimulatedFleet:
@@ -34,6 +82,7 @@ class StateService:
         return cls._instance
 
     def _init(self):
+        self._logger = LogStore()
         self._fleet = SimulatedFleet()
         self._state = {
             "v": 2,
@@ -56,6 +105,11 @@ class StateService:
             "stats": {"pdr_pct": 96.0, "latency_ms": {"min": 210, "avg": 480, "p95": 900}, "alerts": 3, "false_alarms": 0, "rejected": 2},
             "drivers": {"gpio": "simulated", "i2c": "simulated", "usb_zigbee": "simulated", "usb_meshtastic": "simulated"},
         }
+        self._logger.info("StateService initialized")
+
+    @property
+    def logger(self):
+        return self._logger
 
     def snapshot(self):
         with self._lock:
@@ -84,11 +138,13 @@ class StateService:
             self._state["outputs"][channel] = int(value)
             if duration_ms is not None:
                 self._state["outputs"][f"{channel}_ttl_ms"] = int(duration_ms)
+        self._logger.info(f"Output {channel} set to {value}", channel=channel, value=int(value))
 
     def set_outputs_off(self):
         with self._lock:
             self._state["outputs"]["buzzer"] = 0
             self._state["outputs"]["led"] = 0
+        self._logger.info("Outputs disabled")
 
     def ack_alert(self):
         with self._lock:
@@ -97,6 +153,7 @@ class StateService:
             self._state["alert"]["source"] = None
             self._state["alert"]["distance_m"] = None
             self._state["alert"]["expires_in_s"] = None
+        self._logger.info("Alert acknowledged")
 
     def set_mode(self, mode):
         with self._lock:
@@ -109,6 +166,7 @@ class StateService:
                 self._state["drivers"] = {"gpio": "hardware", "i2c": "hardware", "usb_zigbee": "hardware", "usb_meshtastic": "hardware"}
             else:
                 raise ValueError("mod invalid: alege simulation sau hardware")
+        self._logger.info(f"Mode changed to {normalized}", mode=normalized)
 
     def inject_impact(self):
         self._fleet.inject_impact()
@@ -120,6 +178,7 @@ class StateService:
                 "distance_m": 18,
                 "expires_in_s": 5,
             }
+        self._logger.warning("Impact alert simulated", source="V2", distance_m=18)
 
     def start(self):
         self._fleet.running = True

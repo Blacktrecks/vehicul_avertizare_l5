@@ -1,0 +1,21 @@
+[Unit]
+Description=Vehicul Avertizare Dashboard
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__APP_DIR__
+Environment=PYTHONUNBUFFERED=1
+Environment=DJANGO_DEBUG=0
+Environment=DJANGO_ALLOWED_HOSTS=*
+Environment=MCD_SIMULATE=0
+ExecStart=/usr/bin/python3 __APP_DIR__/manage.py runserver 0.0.0.0:8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/vehicul-alert.log
+StandardError=append:/var/log/vehicul-alert.log
+
+[Install]
+WantedBy=multi-user.target

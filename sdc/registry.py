@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -141,6 +142,131 @@ class DeviceRegistry:
         self._save(filtered)
         return True
 
+    def _save_device(self, updated: dict[str, Any]) -> dict[str, Any]:
+        devices = self._load()
+        for idx, item in enumerate(devices):
+            if item.get("id") == updated.get("id"):
+                devices[idx] = updated
+                self._save(devices)
+                return updated
+        devices.append(updated)
+        self._save(devices)
+        return updated
+
+    def _parse_tcp_endpoint(self, device: dict[str, Any]) -> tuple[str, int]:
+        raw = str(device.get("address") or "").strip()
+        if not raw:
+            raise ValueError("Adresa TCP lipsește")
+
+        if ":" in raw:
+            host, port_text = raw.rsplit(":", 1)
+            host = host.strip()
+            port = int(port_text.strip() or "4403")
+        else:
+            host = raw
+            port = int(device.get("port") or 4403)
+
+        if not host:
+            raise ValueError("Host TCP invalid")
+        return host, port
+
+    def _serial_probe(self, device: dict[str, Any]) -> None:
+        port = str(device.get("port") or device.get("address") or "").strip()
+        if not port:
+            raise ValueError("Port serial lipsă")
+        try:
+            import serial
+        except Exception as exc:
+            raise RuntimeError("pyserial nu este instalat") from exc
+        # Open+close validates that the serial port exists and is not busy.
+        handle = serial.Serial(port=port, baudrate=115200, timeout=1)
+        handle.close()
+
+    def _tcp_probe(self, device: dict[str, Any]) -> None:
+        host, port = self._parse_tcp_endpoint(device)
+        with socket.create_connection((host, port), timeout=2):
+            return
+
+    def _build_link(self, device: dict[str, Any]):
+        transport = str(device.get("transport") or "sim").strip().lower()
+        address = str(device.get("address") or device.get("port") or "").strip()
+        if transport in {"sim", "simulated"}:
+            return None
+        if transport in {"serial", "usb", "meshtastic", "lora"} and (address.startswith("/dev/") or "tty" in address.lower()):
+            from .meshtastic_link import MeshtasticLink
+            return MeshtasticLink(port=address, name=str(device.get("id") or "serial"))
+        if transport in {"tcp", "wifi", "meshtastic", "lora"}:
+            from .meshtastic_link import MeshtasticLink
+            host, port = self._parse_tcp_endpoint(device)
+            return MeshtasticLink(host=host, portnum=port, name=str(device.get("id") or "tcp"))
+        return None
+
+    def probe_device(self, device: dict[str, Any]) -> dict[str, Any]:
+        transport = str(device.get("transport") or "sim").strip().lower()
+        if transport in {"sim", "simulated"}:
+            return {"ok": True, "message": "Dispozitiv simulat: OK"}
+        try:
+            if transport in {"serial", "usb"}:
+                self._serial_probe(device)
+                return {"ok": True, "message": "Port serial accesibil"}
+            if transport in {"tcp", "wifi", "meshtastic", "lora"}:
+                self._tcp_probe(device)
+                return {"ok": True, "message": "Conexiune TCP activă"}
+            return {"ok": False, "message": f"Transport necunoscut: {transport}"}
+        except Exception as exc:
+            return {"ok": False, "message": str(exc)}
+
+    def connect_device(self, device_id: str) -> dict[str, Any]:
+        device = self.get_device(device_id)
+        if device is None:
+            raise KeyError("device not found")
+        result = self.probe_device(device)
+        device["last_action"] = "connect"
+        device["last_message"] = result["message"]
+        device["state"] = "connected" if result["ok"] else "error"
+        self._save_device(device)
+        return {"device": device, "result": result}
+
+    def disconnect_device(self, device_id: str) -> dict[str, Any]:
+        device = self.get_device(device_id)
+        if device is None:
+            raise KeyError("device not found")
+        device["state"] = "disconnected"
+        device["last_action"] = "disconnect"
+        device["last_message"] = "Dispozitiv deconectat logic"
+        self._save_device(device)
+        return {"device": device, "result": {"ok": True, "message": device["last_message"]}}
+
+    def send_test(self, device_id: str) -> dict[str, Any]:
+        device = self.get_device(device_id)
+        if device is None:
+            raise KeyError("device not found")
+
+        link = self._build_link(device)
+        if link is not None:
+            try:
+                link.connect()
+                sent = link.send_text(str(device.get("id") or "pi"), "PING")
+                status_ok = sent > 0 or link.is_connected()
+                message = f"Ping OK ({sent} bytes sent)" if status_ok else "Ping failed"
+                result = {"ok": status_ok, "message": message}
+                if link.is_connected():
+                    link.disconnect()
+            except Exception as exc:  # pragma: no cover - hardware/network volatility
+                result = {"ok": False, "message": str(exc)}
+        else:
+            result = self.probe_device(device)
+            if result["ok"]:
+                result["message"] = "Ping OK (simulated)"
+
+        device["last_action"] = "send-test"
+        device["last_test"] = "ok" if result["ok"] else "failed"
+        device["last_message"] = result["message"]
+        if result["ok"]:
+            device["state"] = "connected"
+        self._save_device(device)
+        return {"device": device, "result": result}
+
     def scan(self) -> list[dict[str, Any]]:
         devices = self._load()
         ports = scan_serial_ports()
@@ -159,7 +285,7 @@ class DeviceRegistry:
                 lower = f"{description} {hwid}".lower()
                 transport = "serial"
                 role = "Zigbee / USB"
-                if "heltec" in lower or "meshtastic" in lower:
+                if "heltec" in lower or "meshtastic" in lower or "xiao" in lower or "esp32" in lower:
                     role = "Vehicul Meshtastic"
                 elif "xbee" in lower or "zigbee" in lower:
                     role = "Zigbee"
@@ -169,7 +295,7 @@ class DeviceRegistry:
                 record = {
                     "id": re.sub(r"[^a-zA-Z0-9]+", "-", device).strip("-") or f"dev-{len(detected)+1}",
                     "label": label,
-                    "type": "meshtastic" if "heltec" in lower or "meshtastic" in lower else "zigbee",
+                    "type": "meshtastic" if ("heltec" in lower or "meshtastic" in lower or "xiao" in lower or "esp32" in lower) else "zigbee",
                     "transport": transport,
                     "address": device,
                     "port": device,

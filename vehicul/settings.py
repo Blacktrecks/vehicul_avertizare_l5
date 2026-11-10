@@ -10,7 +10,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or (
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 _allowed_host_env = os.environ.get(
     "DJANGO_ALLOWED_HOSTS",
-    "localhost,127.0.0.1,[::1],0.0.0.0,testserver",
+    "localhost,127.0.0.1,[::1],0.0.0.0,testserver,10.33.173.229",
 )
 if _allowed_host_env.strip() == "*":
     ALLOWED_HOSTS = ["*"]

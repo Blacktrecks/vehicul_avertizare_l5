@@ -92,6 +92,12 @@ ls /dev/ttyACM*
 meshtastic --port /dev/ttyACM0 --info
 ```
 
+## Ghid de instalare și test pe Raspberry Pi
+
+Pentru procedura completă de clonare, instalare dependențe, pornire automată la boot, setări Meshtastic și verificări finale pe hardware, vezi:
+
+- `docs/setup_rpi_guide.md`
+
 ## Observații
 
 - `MPU6050_vInit` acceptă doar WHO_AM_I = 0x68; unele plăci clonă raportează altă valoare.

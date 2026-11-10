@@ -7,6 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
     return match ? decodeURIComponent(match[2]) : '';
   };
 
+  const statusClass = (status) => {
+    const s = String(status || '').toLowerCase();
+    if (s.includes('connected') || s.includes('ok')) return 'ok';
+    if (s.includes('error') || s.includes('failed')) return 'error';
+    return 'warn';
+  };
+
+  const humanState = (device) => {
+    const state = String(device.state || 'available').toLowerCase();
+    if (state.includes('connected')) return 'Conectat';
+    if (state.includes('disconnected')) return 'Deconectat';
+    if (state.includes('error')) return 'Eroare';
+    return 'Disponibil';
+  };
+
   const renderRows = (devices = []) => {
     if (!tableBody) return;
     if (!devices.length) {
@@ -24,13 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const address = device.address || device.port || device.device || '-';
       const state = device.state || 'connected';
       const label = device.label || device.name || device.id || address;
-      const isConnected = state === 'connected';
+      const status = humanState(device);
       return `
         <tr>
           <td>${label}</td>
           <td>${type}</td>
           <td>${address}</td>
-          <td><span class="status-chip ${isConnected ? 'ok' : ''}">${isConnected ? 'Conectat' : 'Disponibil'}</span></td>
+          <td><span class="status-chip ${statusClass(state)}">${status}</span></td>
           <td>
             <div class="chip-actions">
               <button type="button" data-device-id="${id}" data-device-action="connect">Conectează</button>
@@ -64,8 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {}),
       },
     });
+    const payload = await response.json().catch(() => ({}));
     if (response.ok) {
       await loadDevices();
+      if (payload.result && payload.result.message) {
+        window.alert(payload.result.message);
+      }
+    } else {
+      window.alert(payload.error || 'Acțiunea a eșuat.');
     }
   };
 
