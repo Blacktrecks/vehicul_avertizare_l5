@@ -87,11 +87,28 @@ class DeviceRegistryTests(unittest.TestCase):
                 self.assertEqual(connected["device"]["state"], "connected")
                 self.assertEqual(connected["result"]["message"], "Meshtastic reachable")
 
-            with patch.object(DeviceRegistry, "probe_device", return_value={"ok": True, "message": "Ping OK"}):
+            with patch.object(DeviceRegistry, "probe_device", return_value={"ok": True, "message": "Test network OK"}):
                 result = registry.send_test("mesh-demo")
                 self.assertEqual(result["device"]["last_action"], "send-test")
                 self.assertEqual(result["device"]["last_test"], "ok")
-                self.assertIn("Ping", result["device"]["last_message"])
+                self.assertIn("test", result["device"]["last_message"].lower())
+                self.assertIn("simulat", result["device"]["last_message"].lower())
+
+    def test_registry_disconnect_marks_device_state_and_returns_clear_status(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = DeviceRegistry(Path(temp_dir) / "devices.json")
+            registry.add_device({
+                "id": "mesh-off",
+                "label": "LoRa Node",
+                "transport": "sim",
+                "address": "sim://mesh-off",
+                "role": "Vehicul simulat",
+                "state": "connected",
+            })
+
+            disconnected = registry.disconnect_device("mesh-off")
+            self.assertEqual(disconnected["device"]["state"], "disconnected")
+            self.assertIn("deconectat", disconnected["result"]["message"].lower())
 
     def test_log_store_records_and_reads_entries(self):
         with tempfile.TemporaryDirectory() as temp_dir:
